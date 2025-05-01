@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Connections;
 using Microsoft.EntityFrameworkCore;
 using URL_Shortener.Data;
+using URL_Shortener.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,7 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
+builder.Services.AddScoped<UrlShorteningService>();
 
 app.UseHttpsRedirection();
 
