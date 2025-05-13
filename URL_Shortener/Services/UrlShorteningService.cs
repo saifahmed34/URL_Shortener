@@ -2,22 +2,22 @@
 {
     public class UrlShorteningService
     {
-        private const string Alphapet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        private const string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         private readonly Random _random = new Random();
 
-        public string UrlShortening(int len = 6)
+        public string GenerateShortCode(int len = 6)
         {
             var chars = new char[len];
             for (int i = 0; i < len; i++)
             {
-                chars[i] = Alphapet[_random.Next(Alphapet.Length)];
-
+                chars[i] = Alphabet[_random.Next(Alphabet.Length)];
             }
             return new string(chars);
         }
-        public string GenUrl(string url)
+
+        public string GetShortUrl(string shortCode)
         {
-            return $"https://saif.com/{url}";
+            return $"https://shorturl.com/{shortCode}";
         }
     }
 }
