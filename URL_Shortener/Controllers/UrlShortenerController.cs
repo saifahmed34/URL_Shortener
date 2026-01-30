@@ -6,83 +6,76 @@ using URL_Shortener.Services;
 
 namespace URL_Shortener.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class UrlShortenerController : ControllerBase
     {
         private readonly AppDbContext _context;
         private readonly UrlShorteningService _urlShorteningService;
 
-        public UrlShortenerController(AppDbContext context, UrlShorteningService urlShorteningService)
+        public UrlShortenerController(
+            AppDbContext context,
+            UrlShorteningService urlShorteningService)
         {
             _context = context;
             _urlShorteningService = urlShorteningService;
         }
 
+        // POST: api/UrlShortener/shorten
         [HttpPost("shorten")]
-        public async Task<IActionResult> ShortenUrl([FromBody] UrlRequest request)
+        public async Task<ActionResult<UrlResponse>> ShortenUrl([FromBody] UrlRequest request)
         {
-            if (!Uri.TryCreate(request.OriginalUrl, UriKind.Absolute, out _))
+            if (string.IsNullOrWhiteSpace(request.OriginalUrl))
+                return BadRequest("URL is required");
+
+            var originalUrl = request.OriginalUrl.Trim();
+
+            //auto-add scheme if missing
+            if (!originalUrl.StartsWith("http://") &&
+                !originalUrl.StartsWith("https://"))
             {
-                return BadRequest("Invalid URL format");
+                originalUrl = "https://" + originalUrl;
             }
 
+        
             var existingUrl = await _context.Urls
-                .FirstOrDefaultAsync(s => s.OriginalUrl == request.OriginalUrl);
+            .FirstOrDefaultAsync(x => x.OriginalUrl == originalUrl);
 
             if (existingUrl != null)
             {
                 return Ok(new UrlResponse
                 {
-                    ShortUrl = _urlShorteningService.GetShortUrl(existingUrl.ShortCode),
-                    OriginalUrl = existingUrl.OriginalUrl
+                    OriginalUrl = existingUrl.OriginalUrl,
+                    ShortUrl = _urlShorteningService
+                    .GetShortUrl(existingUrl.ShortCode, Request)
                 });
             }
 
-            var shortCode = _urlShorteningService.GenerateShortCode();
-            var shortUrl = new Url
+            // generate short code
+            string shortCode;
+            do
             {
-                OriginalUrl = request.OriginalUrl,
+                shortCode = _urlShorteningService.GenerateShortCode();
+            }
+            while (await _context.Urls.AnyAsync(x => x.ShortCode == shortCode));
+
+            var url = new Url
+            {
+                OriginalUrl = originalUrl, // 👈 store normalized URL
                 ShortCode = shortCode,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.UtcNow,
+                ClickCount = 0
             };
 
-            _context.Urls.Add(shortUrl);
+            _context.Urls.Add(url);
             await _context.SaveChangesAsync();
 
             return Ok(new UrlResponse
             {
-                ShortUrl = _urlShorteningService.GetShortUrl(shortCode),
-                OriginalUrl = request.OriginalUrl
+                OriginalUrl = originalUrl,
+                ShortUrl = _urlShorteningService.GetShortUrl(shortCode, Request)
             });
         }
 
-        [HttpGet("{shortCode}")]
-        public async Task<IActionResult> RedirectUrl(string shortCode)
-        {
-            var url = await _context.Urls
-                .FirstOrDefaultAsync(s => s.ShortCode == shortCode);
-
-            if (url == null)
-            {
-                return NotFound("Short URL not found");
-            }
-
-            url.ClickCount++;
-            await _context.SaveChangesAsync();
-
-            return Redirect(url.OriginalUrl);
-        }
-    }
-
-    public class UrlRequest
-    {
-        public string OriginalUrl { get; set; }
-    }
-
-    public class UrlResponse
-    {
-        public string ShortUrl { get; set; }
-        public string OriginalUrl { get; set; }
     }
 }

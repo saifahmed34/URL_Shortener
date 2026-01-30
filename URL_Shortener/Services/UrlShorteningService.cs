@@ -15,9 +15,9 @@
             return new string(chars);
         }
 
-        public string GetShortUrl(string shortCode)
+        public string GetShortUrl(string shortCode, HttpRequest request)
         {
-            return $"https://shorturl.com/{shortCode}";
+            return $"{request.Scheme}://{request.Host}/{shortCode}";
         }
     }
 }
