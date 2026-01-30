@@ -61,7 +61,7 @@ namespace URL_Shortener.Controllers
 
             var url = new Url
             {
-                OriginalUrl = originalUrl, // 👈 store normalized URL
+                OriginalUrl = originalUrl,
                 ShortCode = shortCode,
                 CreatedDate = DateTime.UtcNow,
                 ClickCount = 0
